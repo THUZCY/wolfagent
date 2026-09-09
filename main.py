@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from engine import GameEngine, GameEvent, Phase, ROLE_ZH
 from agent import Agent
-from llm import MockProvider, OpenAIProvider, DeepSeekProvider
+from llm import MockProvider, OpenAIProvider, DeepSeekProvider, GroqProvider, GeminiProvider, OllamaProvider
 
 app = FastAPI(title="WolfAgent")
 games = {}
@@ -231,4 +231,6 @@ async def game_step(gid: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get('PORT', 8000)))
+
+
 
