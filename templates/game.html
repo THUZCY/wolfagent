@@ -152,9 +152,14 @@ body {
 .belief-row .bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
 .belief-row .pct { width: 34px; text-align: right; color: var(--text-dim); font-size: 10px; }
 
+.memory-box { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; }
 .reasoning-box { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .player-card.selected .reasoning-box { display: block; }
-.reasoning-box .r-title {
+.player-card.selected .memory-box { display: block; }
+.reasoning-box .memory-section { margin-bottom: 4px; }
+.mem-title { font-size: 10px; font-weight: 700; color: var(--god); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 1px; }
+.mem-item { font-size: 10px; color: var(--text-dim); padding: 2px 0; padding-left: 4px; }
+.r-title {
   font-size: 10px; color: var(--text-dim); margin-bottom: 6px;
   text-transform: uppercase; letter-spacing: 1.5px;
 }
@@ -562,6 +567,8 @@ async function refreshAgentView(num) {
       if (!card) return;
       var bb = card.querySelector(".belief-bars");
       bb.innerHTML = buildBeliefBars(d.agent_view.belief, d.agent_view.memory);
+      var mb = card.querySelector(".memory-box");
+      if (mb && d.agent_view.memory) mb.innerHTML = buildMemory(d.agent_view.memory);
       var rb = card.querySelector(".reasoning-box");
       rb.innerHTML = buildReasoning(d.agent_view.reasoning);
       var rh = card.querySelector(".role-hint");
