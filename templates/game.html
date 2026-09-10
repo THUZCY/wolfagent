@@ -332,7 +332,32 @@ body {
   color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;
   font-family: inherit; letter-spacing: 1px; transition: all .25s;
 }
-.gameover-overlay .go-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.go-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.go-stats { display: flex; gap: 24px; justify-content: center; margin-top: 12px; font-size: 13px; color: var(--text-dim); }
+.go-stats strong { color: var(--text); }
+.go-scoreboard { max-width: 560px; width: 100%; max-height: 240px; overflow-y: auto; margin-top: 12px; text-align: left; }
+.go-scoreboard .sr { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; margin-bottom: 3px; background: rgba(255,255,255,.04); }
+.go-scoreboard .sr.mvp { border: 1px solid var(--warn); background: rgba(240,165,0,.08); }
+.go-scoreboard .sr .rk { font-size: 15px; font-weight: 800; width: 22px; text-align: center; flex-shrink: 0; color: var(--text-dim); }
+.go-scoreboard .sr .rk.gold { color: var(--warn); }
+.go-scoreboard .sr .rk.silver { color: #aaa; }
+.go-scoreboard .sr .rk.bronze { color: #cd7f32; }
+.go-scoreboard .sr .si { flex: 1; font-size: 11px; min-width: 0; }
+.go-scoreboard .sr .si .sn { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.go-scoreboard .sr .si .sm { color: var(--text-dim); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.go-scoreboard .sr .si .sh { color: var(--text-dim); font-size: 10px; margin-top: 1px; }
+.go-scoreboard .sr .sc { text-align: right; flex-shrink: 0; min-width: 36px; }
+.go-scoreboard .sr .sc .num { font-size: 20px; font-weight: 800; line-height: 1; }
+.go-scoreboard .sr .sc .gd { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 700; display: inline-block; }
+.gd-S { background: var(--warn); color: #1a1a2e; }
+.gd-A { background: var(--good); color: #1a1a2e; }
+.gd-B { background: #5b8def; color: #fff; }
+.gd-C { background: var(--text-dim); color: #1a1a2e; }
+.gd-D { background: var(--bad); color: #fff; }
+
+
 
 /* ===== 响应式 ===== */
 @media (max-width: 768px) {
@@ -386,7 +411,14 @@ body {
   <div class="go-title" id="goTitle"></div>
   <div class="go-sub" id="goSub"></div>
   <div class="go-recap" id="goRecap"></div>
-  <button class="go-btn" onclick="location.href='/'">🏠 返回首页</button>
+  <div class="go-stats" id="goStats" style="display:none">
+    <span>MVP: <strong id="goMvp"></strong></span>
+    <span>Avg: <strong id="goAvg"></strong></span>
+    <span>Days: <strong id="goDays"></strong></span>
+  </div>
+  <div class="go-scoreboard" id="goScoreboard" style="display:none"></div>
+  <button class="go-btn" onclick="location.href='/'"> 返回首页</button>
+</div>
 </div>
 
 <script>
@@ -589,8 +621,39 @@ function showGameOver() {
   el("goTitle").textContent = isVillagers ? "村民阵营胜利！" : "狼人阵营胜利！";
   el("goTitle").style.color = isVillagers ? "var(--good)" : "var(--bad)";
   el("goSub").textContent = "第 "+(lastState.day||1)+" 天结束";
-  var recap = lastState.recap || {};
-  el("goRecap").textContent = recap.summary || "游戏结束，感谢观看！";
+
+  var recap = lastState.recap;
+  if (recap && recap.scores) {
+    el("goRecap").textContent = (recap.overall||"").replace(/\\n/g, " | ");
+    el("goMvp").textContent = (recap.mvp||"?")+"号";
+    el("goAvg").textContent = (recap.avg_score||"?")+"/100";
+    el("goDays").textContent = recap.total_days||"?";
+    el("goStats").style.display = "flex";
+
+    var sb = el("goScoreboard");
+    var h2 = ""; var scores = recap.scores;
+    for (var i=0; i<scores.length; i++) {
+      var s = scores[i];
+      var rkC = ""; if(i===0)rkC=" gold"; else if(i===1)rkC=" silver"; else if(i===2)rkC=" bronze";
+      h2 += '<div class="sr'+(i===0?" mvp":"")+'">';
+      h2 += '<div class="rk'+rkC+'">'+(i+1)+'</div>';
+      h2 += '<div class="si">';
+      h2 += '<div class="sn">'+s.player+'号 <span class="gd gd-'+s.grade+'">'+s.grade+'</span> '+s.role+'</div>';
+      h2 += '<div class="sm">Team:'+s.team_win+' Vote:'+s.vote_accuracy+' Action:'+s.key_actions+' Live:'+s.survival+'</div>';
+      if (s.highlights && s.highlights.length) h2 += '<div class="sh">'+s.highlights.join(" | ")+'</div>';
+      h2 += '</div>';
+      var sc = s.total>=80?"var(--good)":(s.total>=50?"var(--text)":"var(--bad)");
+      h2 += '<div class="sc"><div class="num" style="color:'+sc+'">'+s.total+'</div></div>';
+      h2 += '</div>';
+    }
+    sb.innerHTML = h2;
+    sb.style.display = "block";
+  } else {
+    el("goRecap").textContent = (recap && recap.summary) || "游戏结束，感谢观看！";
+    el("goStats").style.display = "none";
+    el("goScoreboard").style.display = "none";
+  }
+
   overlay.classList.add("show");
   el("btnStep").disabled = true;
   el("btnAuto").disabled = true;
