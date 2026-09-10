@@ -286,7 +286,7 @@ cautious:[
 var currentPreset="diverse";
 
 function shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=r[i];r[i]=r[j];r[j]=t;}return r;}
-function randomPreset(){return Array.from({length:7},function(){return{aggression:Math.round((Math.random()*.8+.1)*10)/10,talkativeness:Math.round((Math.random()*.8+.1)*10)/10,caution:Math.round((Math.random()*.8+.1)*10)/10}})}
+function randomPreset(){return Array.from({length:7},function(){return{aggression:Math.round((Math.random()*.8+.1)*10)/10,talkativeness:Math.round((Math.random()*.8+.1)*10)/10,caution:Math.round((Math.random()*.8+.1)*10)/10,risk_preference:Math.round((Math.random()*.8+.1)*10)/10}})}
 function showToast(m,t){var e=document.getElementById("toast");e.textContent=m;e.className="toast "+t+" show";setTimeout(function(){e.className="toast"},2500)}
 function loading(s){document.getElementById("loading").className=s?"loading-overlay show":"loading-overlay"}
 
@@ -315,6 +315,7 @@ function renderPersonalityGrid(){
     h+=slider(p.num,"aggression","激进",t.aggression);
     h+=slider(p.num,"talkativeness","话多",t.talkativeness);
     h+=slider(p.num,"caution","谨慎",t.caution);
+h+=slider(p.num,"risk_preference","冒险",t.risk_preference||0.5);
     h+="</div></div>";
   }
   g.innerHTML=h;

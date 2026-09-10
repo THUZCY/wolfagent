@@ -11,6 +11,7 @@ class Agent:
         self.aggression = personality.get("aggression", 0.5)
         self.talkativeness = personality.get("talkativeness", 0.5)
         self.caution = personality.get("caution", 0.5)
+        self.risk_preference = personality.get("risk_preference", 0.5)
         self.memory: list[dict] = []
         self.belief: dict[int, float] = {}
         self.reasoning: list[str] = []
@@ -65,6 +66,9 @@ class Agent:
         suspects = sorted(self.belief.items(), key=lambda x: -x[1])
         top_suspect = suspects[0][0] if suspects else None
 
+        # risk_preference -> action_threshold: 0.45~0.70
+        action_threshold = 0.70 - self.risk_preference * 0.25
+
         action = {"type": "pass", "target": None, "speech": "", "reasoning": list(self.reasoning)}
 
         if phase == Phase.NIGHT_WEREWOLF:
@@ -87,7 +91,7 @@ class Agent:
                     else:
                         action = {"type": "pass", "target": None, "speech": "", "reasoning": ["女巫选择不使用解药"]}
                 elif engine.witch_has_poison and top_suspect:
-                    if self.belief.get(top_suspect, 0) > 0.5:
+                    if self.belief.get(top_suspect, 0) > action_threshold:
                         action = {"type": "poison", "target": top_suspect, "speech": "", "reasoning": ["女巫使用毒药毒杀嫌疑最大的" + str(top_suspect) + "号"]}
         elif phase == Phase.DAY_SPEECH:
             # Generate speech
@@ -100,8 +104,12 @@ class Agent:
             action["speech"] = speech
             action["target"] = top_suspect
         elif phase == Phase.DAY_VOTE:
-            if top_suspect:
+            if top_suspect and self.belief.get(top_suspect, 0) > action_threshold:
                 action = {"type": "vote", "target": top_suspect, "speech": "", "reasoning": self.reasoning + ["根据信念分析，投票" + str(top_suspect) + "号"]}
+            elif top_suspect and self.risk_preference > 0.65:
+                action = {"type": "vote", "target": top_suspect, "speech": "", "reasoning": self.reasoning + ["激进判断，投票" + str(top_suspect) + "号"]}
+            elif top_suspect:
+                action = {"type": "vote", "target": random.choice(alive_others), "speech": "", "reasoning": ["信念不足，谨慎随机投票"]}
             else:
                 action = {"type": "vote", "target": random.choice(alive_others), "speech": "", "reasoning": ["没有明确嫌疑人，随机投票"]}
 
@@ -123,9 +131,13 @@ class Agent:
             for r in self.reasoning[-5:]:
                 lines.append("  - " + r)
         lines.append("")
-        if self.aggression > 0.6:
-            lines.append("人格：你非常激进，倾向于直接指控。")
-        elif self.caution > 0.6:
-            lines.append("人格：你非常谨慎，说话留有余地。")
+        if self.risk_preference > 0.7:
+            lines.append("人格：你非常激进，即使证据不足也敢于直接指控。")
+        elif self.risk_preference > 0.55:
+            lines.append("人格：你独立判断，不被多数意见左右，坚持自己的推理。")
+        elif self.risk_preference > 0.35:
+            lines.append("人格：你倾向于跟随多数意见，注意观察大家的态度。")
+        else:
+            lines.append("人格：你非常谨慎，只有把握很大时才公开怀疑别人。")
         lines.append("请以狼人杀玩家的身份进行自然发言。")
         return "\n".join(lines)
