@@ -640,18 +640,18 @@ async function pollBenchProgress() {
 }
 function showBenchResults(d) {
   var total = d.total_games || 0;
-  var h = "<p><strong>完成 " + total + " 局实验</strong></p>";
-  h += "<table class="bench-table">";
-  h += "<tr><th>指标</th><th>数值</th></tr>";
-  h += "<tr><td>狼人胜率</td><td>" + Math.round((d.werewolf_win_rate||0)*100) + "%</td></tr>";
-  h += "<tr><td>好人胜率</td><td>" + Math.round((d.villager_win_rate||0)*100) + "%</td></tr>";
-  h += "<tr><td>平均游戏天数</td><td>" + (d.average_game_length_days||0) + "</td></tr>";
-  h += "<tr><td>狼人识别准确率</td><td>" + Math.round((d.wolf_identification_accuracy||0)*100) + "%</td></tr>";
-  h += "<tr><td>投票准确率</td><td>" + Math.round((d.vote_accuracy||0)*100) + "%</td></tr>";
-  h += "<tr><td>平均得分</td><td>" + (d.average_score||0) + "/100</td></tr>";
+  var h = "<p><strong>" + String.fromCharCode(23436) + String.fromCharCode(25104) + " " + total + " " + String.fromCharCode(23616) + String.fromCharCode(23454) + String.fromCharCode(39564) + "</strong></p>";
+  h += '<table class="bench-table">';
+  h += '<tr><th>' + String.fromCharCode(25351) + String.fromCharCode(26631) + '</th><th>' + String.fromCharCode(25968) + String.fromCharCode(20540) + '</th></tr>';
+  h += '<tr><td>' + String.fromCharCode(29436) + String.fromCharCode(20154) + String.fromCharCode(32988) + String.fromCharCode(29575) + '</td><td>' + Math.round((d.werewolf_win_rate||0)*100) + '%</td></tr>';
+  h += '<tr><td>' + String.fromCharCode(22909) + String.fromCharCode(20154) + String.fromCharCode(32988) + String.fromCharCode(29575) + '</td><td>' + Math.round((d.villager_win_rate||0)*100) + '%</td></tr>';
+  h += '<tr><td>' + String.fromCharCode(24179) + String.fromCharCode(22343) + String.fromCharCode(28216) + String.fromCharCode(25103) + String.fromCharCode(22825) + String.fromCharCode(25968) + '</td><td>' + (d.average_game_length_days||0) + '</td></tr>';
+  h += '<tr><td>' + String.fromCharCode(29436) + String.fromCharCode(20154) + String.fromCharCode(35782) + String.fromCharCode(21035) + String.fromCharCode(20934) + String.fromCharCode(30830) + String.fromCharCode(29575) + '</td><td>' + Math.round((d.wolf_identification_accuracy||0)*100) + '%</td></tr>';
+  h += '<tr><td>' + String.fromCharCode(25237) + String.fromCharCode(31080) + String.fromCharCode(20934) + String.fromCharCode(30830) + String.fromCharCode(29575) + '</td><td>' + Math.round((d.vote_accuracy||0)*100) + '%</td></tr>';
+  h += '<tr><td>' + String.fromCharCode(24179) + String.fromCharCode(22343) + String.fromCharCode(24471) + String.fromCharCode(20998) + '</td><td>' + (d.average_score||0) + '/100</td></tr>';
   var sr = d.survival_rates_by_role || {};
-  for (var role in sr) { h += "<tr><td>" + role + "存活率</td><td>" + Math.round(sr[role]*100) + "%</td></tr>"; }
-  h += "</table>";
+  for (var role in sr) { h += '<tr><td>' + role + String.fromCharCode(23384) + String.fromCharCode(27963) + String.fromCharCode(29575) + '</td><td>' + Math.round(sr[role]*100) + '%</td></tr>'; }
+  h += '</table>';
   document.getElementById("benchStats").innerHTML = h;
 }
 
