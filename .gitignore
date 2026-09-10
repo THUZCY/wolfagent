@@ -4,3 +4,9 @@ __pycache__/
 .env
 test_*.py
 .learnings/
+
+*.docx
+*.bak
+_build.py
+_gen.py
+build_agent.py

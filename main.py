@@ -6,10 +6,12 @@ from engine import GameEngine, GameEvent, Phase, ROLE_ZH, generate_recap
 from agent import Agent
 from llm import MockProvider, OpenAIProvider, DeepSeekProvider, GroqProvider, GeminiProvider, OllamaProvider
 from highlights import HighlightDetector, generate_highlight_narrative
+from benchmark_runner import BenchmarkRunner
 import os
 
 app = FastAPI(title="WolfAgent")
 games = {}
+benchmarks = {}
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -76,6 +78,7 @@ async def game_state(gid: str, player_num: int = Query(0)):
             "belief": {str(k): round(v, 2) for k, v in agent.belief.items()},
             "reasoning": agent.reasoning[-10:],
             "personality": agent.personality,
+            "memory": agent.memory.to_dict() if hasattr(agent, "memory") else {},
         }
     # Auto-detect highlights when game finishes
     if g["finished"]:
@@ -213,9 +216,20 @@ async def game_step(gid: str):
                 action = agent.decide(engine)
                 if action["type"] == "vote" and action["target"]:
                     engine.votes[agent.num] = action["target"]
+                    # Record vote in agent memory
+                    agent.memory.add_vote(engine.day, agent.num, action["target"], was_me=True)
+                    # Build enriched vote message
+                    reason_suffix = ""
+                    if action.get("reason"):
+                        reason_suffix = " (" + action["reason"][:40] + ")"
+                    elif action.get("evidence") and len(action.get("evidence", [])) > 0:
+                        reason_suffix = " (" + action["evidence"][0][:30] + ")"
                     g["log"].append({
                         "type": "vote", "day": engine.day, "player": agent.num, "target": action["target"],
-                        "msg": str(agent.num) + "号 → " + str(action["target"]) + "号",
+                        "msg": str(agent.num) + "号 → " + str(action["target"]) + "号" + reason_suffix,
+                        "confidence": round(action.get("confidence", 0.5), 2),
+                        "reason": action.get("reason", ""),
+                        "evidence": action.get("evidence", [])[:3],
                     })
                     result["events"].append({"type": "vote", "player": agent.num, "target": action["target"]})
 
@@ -267,6 +281,76 @@ async def game_recap(gid: str):
         return JSONResponse({"error": "Game not finished"}, 400)
     recap = generate_recap(engine, g["log"])
     return JSONResponse(recap)
+
+
+
+# ================================================================
+#  Agent Memory API
+# ================================================================
+
+@app.get("/api/game/{gid}/memory/{player_num}")
+async def agent_memory(gid: str, player_num: int):
+    """Get structured memory for a specific agent."""
+    if gid not in games:
+        return JSONResponse({"error": "Game not found"}, 404)
+    g = games[gid]
+    agents = g["agents"]
+    if player_num < 1 or player_num > len(agents):
+        return JSONResponse({"error": "Invalid player number"}, 400)
+    agent = agents[player_num - 1]
+    if hasattr(agent, "memory"):
+        return JSONResponse(agent.memory.to_dict())
+    return JSONResponse({"error": "Memory not available"}, 400)
+
+
+# ================================================================
+#  Benchmark API
+# ================================================================
+
+@app.post("/api/benchmark/start")
+async def start_benchmark(
+    games_count: int = Form(10),
+    provider: str = Form("mock"),
+    apikey: str = Form(""),
+):
+    """Start a benchmark run of N games."""
+    import uuid
+    bid = "bench_" + str(uuid.uuid4())[:8]
+    runner = BenchmarkRunner()
+    benchmarks[bid] = runner
+
+    import threading
+    def run():
+        runner.run_games(games_count, provider, apikey)
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+
+    return JSONResponse({
+        "status": "started",
+        "benchmark_id": bid,
+        "total_games": games_count,
+    })
+
+
+@app.get("/api/benchmark/{bid}/progress")
+async def benchmark_progress(bid: str):
+    """Get current progress of a benchmark run."""
+    if bid not in benchmarks:
+        return JSONResponse({"error": "Benchmark not found"}, 404)
+    runner = benchmarks[bid]
+    return JSONResponse(runner.progress)
+
+
+@app.get("/api/benchmark/{bid}/results")
+async def benchmark_results(bid: str):
+    """Get aggregated results of a completed benchmark."""
+    if bid not in benchmarks:
+        return JSONResponse({"error": "Benchmark not found"}, 404)
+    runner = benchmarks[bid]
+    stats = runner.get_statistics()
+    return JSONResponse(stats)
+
 
 if __name__ == "__main__":
     import uvicorn

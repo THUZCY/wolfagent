@@ -352,6 +352,71 @@ def generate_recap(engine, log):
         u"⏱️ 游戏共进行了 %d 天" % total_days
     )
 
+
+    # ---- Structured Replay Analysis ----
+    # Identify key turning points
+    turning_points = []
+    # Look for: first wolf eliminated, vote flips, critical saves
+    for entry in log:
+        if entry.get("type") == "death":
+            dead_id = entry.get("player")
+            if dead_id and dead_id in wolves:
+                turning_points.append({
+                    "day": entry.get("day", 0),
+                    "event": f"{dead_id}号狼人被淘汰，狼人阵营受损",
+                    "type": "wolf_eliminated",
+                })
+    turning_points.sort(key=lambda x: x["day"])
+
+    # Best deception: wolf who survived and voted correctly against good guys
+    best_deception = None
+    worst_mistake = None
+    best_judge = None
+
+    for s in scores:
+        pid = s.player
+        is_wolf_p = pid in wolves
+        if is_wolf_p and s.alive and s.total >= 50:
+            if best_deception is None or s.total > best_deception["score"]:
+                best_deception = {"player": pid, "role": s.role, "score": s.total}
+        if not is_wolf_p and s.alive and s.total >= 50:
+            if best_judge is None or s.total > best_judge["score"]:
+                best_judge = {"player": pid, "role": s.role, "score": s.total}
+        if s.total < 30:
+            if worst_mistake is None or s.total < worst_mistake["score"]:
+                worst_mistake = {"player": pid, "role": s.role, "score": s.total}
+
+    # Decisive vote: find the vote that eliminated the player whose death triggered game over
+    decisive_vote = None
+    vote_eliminate_events = [entry for entry in log if entry.get("type") == "death"]
+    if vote_eliminate_events:
+        last_death = vote_eliminate_events[-1]
+        last_death_day = last_death.get("day", 0)
+        last_death_player = last_death.get("player")
+        if last_death_player:
+            # Find votes on that day against that player
+            for entry in log:
+                if entry.get("type") == "vote" and entry.get("day") == last_death_day and entry.get("target") == last_death_player:
+                    decisive_vote = {"day": last_death_day, "target": last_death_player, "voter": entry.get("player"), "role": ROLE_ZH[engine.get_player(last_death_player).role] if last_death_player else ""}
+
+    # Key seer checks
+    key_checks = []
+    for ev in engine.events:
+        if ev.event_type == "seer_check_wolf":
+            key_checks.append({"day": ev.day, "seer": ev.source, "wolf_found": ev.target, "type": "found_wolf"})
+
+    structured_analysis = {
+        "turning_points": turning_points[:5],
+        "best_deception": best_deception,
+        "best_judge": best_judge,
+        "worst_mistake": worst_mistake,
+        "decisive_vote": decisive_vote,
+        "key_seer_checks": key_checks[:5],
+        "winner_camp": winner_text,
+        "total_players": len(engine.players),
+        "alive_at_end": len(engine.get_alive()),
+    }
+
     return {
         "scores": [{
             "player": s.player,
@@ -370,5 +435,6 @@ def generate_recap(engine, log):
         "mvp": mvp.player,
         "avg_score": round(avg_score, 1),
         "total_days": total_days,
+        "analysis": structured_analysis,
     }
 

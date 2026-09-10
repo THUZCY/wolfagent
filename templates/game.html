@@ -514,6 +514,7 @@ function updatePlayerList(plist) {
     h += '</div>';
     h += '<div class="belief-bars"></div>';
     h += '<div class="reasoning-box"></div>';
+    h += '<div class="memory-box"></div>';
     h += '</div>';
   }
   list.innerHTML = h;
@@ -535,7 +536,7 @@ async function refreshAgentView(num) {
       var card = document.querySelector(".player-card[data-player='"+num+"']");
       if (!card) return;
       var bb = card.querySelector(".belief-bars");
-      bb.innerHTML = buildBeliefBars(d.agent_view.belief);
+      bb.innerHTML = buildBeliefBars(d.agent_view.belief, d.agent_view.memory);
       var rb = card.querySelector(".reasoning-box");
       rb.innerHTML = buildReasoning(d.agent_view.reasoning);
       var rh = card.querySelector(".role-hint");
@@ -544,7 +545,8 @@ async function refreshAgentView(num) {
   } catch(e) {}
 }
 
-function buildBeliefBars(belief) {
+function buildBeliefBars(belief, memory) {
+  // memory object has player_beliefs with evidence per player
   if (!belief) return '<div style="font-size:11px;color:var(--text-muted)">暂无信念数据</div>';
   var sorted = Object.entries(belief).sort(function(a,b) { return b[1]-a[1]; });
   var h = "";
@@ -553,9 +555,32 @@ function buildBeliefBars(belief) {
     var color = pct>50 ? "var(--bad)" : "var(--good)";
     h += '<div class="belief-row"><span class="blabel">'+pid+'号</span>';
     h += '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
-    h += '<span class="pct">'+pct+'%</span></div>';
+        var memB = memory && memory.player_beliefs ? memory.player_beliefs[pid] : null;
+    var conf = memB ? Math.round(memB.confidence*100) : 50;
+    var ev = memB && memB.evidence ? memB.evidence : [];
+    h += '<span class="pct">'+pct+'%<small> ('+conf+'% conf)</small></span></div>';
+    if (ev.length) {
+      h += '<div class="evidence-list">';
+      for (var j=0;j<Math.min(ev.length,2);j++) { h += '<div class="evidence-item">'+ev[j].description+'</div>'; }
+      h += '</div>';
+    }
   }
   return h || '<div style="font-size:11px;color:var(--text-muted)">暂无信念数据</div>';
+}
+
+function buildMemory(mem) {
+  if (!mem) return '';
+  var h = '<div class="memory-section">';
+  if (mem.known_facts && mem.known_facts.length) {
+    h += '<div class="mem-title">已知事实</div>';
+    for (var i=0;i<Math.min(mem.known_facts.length,3);i++) h += '<div class="mem-item">• '+mem.known_facts[i].fact+'</div>';
+  }
+  if (mem.contradictions && mem.contradictions.length) {
+    h += '<div class="mem-title" style="color:var(--warn)">矛盾检测</div>';
+    for (var i=0;i<Math.min(mem.contradictions.length,2);i++) h += '<div class="mem-item">⚠ '+mem.contradictions[i].description+'</div>';
+  }
+  h += '</div>';
+  return h;
 }
 
 function buildReasoning(rs) {
