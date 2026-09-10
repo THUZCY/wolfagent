@@ -104,10 +104,6 @@ async def game_step(gid: str):
     if gid not in games:
         return JSONResponse({"error": "Game not found"}, 404)
     g = games[gid]
-    if g["busy"]:
-        return JSONResponse({"phase": "busy", "day": 0, "alive": [], "events": [], "finished": False})
-    g["busy"] = True
-    try:
     async with g["lock"]:
         engine = g["engine"]
         agents = g["agents"]
@@ -259,8 +255,6 @@ async def game_step(gid: str):
         result["alive"] = engine.get_alive()
         result["finished"] = g["finished"]
         return JSONResponse(result)
-    finally:
-        g["busy"] = False
 
 
 @app.get("/api/game/{gid}/recap")
