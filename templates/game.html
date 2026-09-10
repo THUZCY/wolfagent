@@ -244,6 +244,24 @@ body::before {
   background:var(--card);border-radius:14px;padding:20px 28px;
   border:1px solid var(--border);
 }
+
+.go-stats{display:flex;gap:24px;justify-content:center;margin-top:8px;font-size:13px;color:var(--text-dim)}
+.go-stats strong{color:var(--text)}
+.go-scoreboard{max-width:560px;width:100%;max-height:300px;overflow-y:auto;margin-top:12px}
+.go-scoreboard .score-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:4px;background:#0d0d1f}
+.go-scoreboard .score-row.mvp{border:1px solid var(--warn);background:#1a1a0f}
+.go-scoreboard .s-rank{font-size:16px;font-weight:800;width:22px;text-align:center;flex-shrink:0}
+.go-scoreboard .s-rank.gold{color:var(--warn)}
+.go-scoreboard .s-rank.silver{color:#aaa}
+.go-scoreboard .s-rank.bronze{color:#cd7f32}
+.go-scoreboard .s-info{flex:1;font-size:12px}
+.go-scoreboard .s-info .s-name{font-weight:600;font-size:13px}
+.go-scoreboard .s-info .s-meta{color:var(--text-dim);font-size:10px}
+.go-scoreboard .s-info .s-hl{color:var(--text-dim);font-size:10px;margin-top:1px}
+.go-scoreboard .s-score{text-align:right;flex-shrink:0}
+.go-scoreboard .s-score .num{font-size:22px;font-weight:800;line-height:1}
+.go-scoreboard .s-score .grade{font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700}
+
 .gameover-overlay .go-btn{
   margin-top:12px;padding:12px 36px;border-radius:12px;
   background:var(--card);border:1px solid var(--border);
@@ -327,7 +345,13 @@ body::before {
   <div class="go-title" id="goTitle"></div>
   <div class="go-sub" id="goSub"></div>
   <div class="go-recap" id="goRecap"></div>
-  <button class="go-btn" onclick="location.href='/'"">🏠 返回首页</button>
+  <div class="go-stats">
+    <span>MVP: <strong id="goMvp"></strong></span>
+    <span>Avg: <strong id="goAvg"></strong></span>
+    <span>Days: <strong id="goDays"></strong></span>
+  </div>
+  <div class="go-scoreboard" id="goScoreboard"></div>
+  <button class="go-btn" onclick="location.href='/'"> 返回首页</button>
 </div>
 
 <script>
