@@ -624,34 +624,17 @@ function showGameOver() {
 
   var recap = lastState.recap;
   if (recap && recap.scores) {
-    el("goRecap").textContent = (recap.overall||"").replace(/\\n/g, " | ");
-    el("goMvp").textContent = (recap.mvp||"?")+"号";
-    el("goAvg").textContent = (recap.avg_score||"?")+"/100";
-    el("goDays").textContent = recap.total_days||"?";
-    el("goStats").style.display = "flex";
-
-    var sb = el("goScoreboard");
-    var h2 = ""; var scores = recap.scores;
-    for (var i=0; i<scores.length; i++) {
-      var s = scores[i];
-      var rkC = ""; if(i===0)rkC=" gold"; else if(i===1)rkC=" silver"; else if(i===2)rkC=" bronze";
-      h2 += '<div class="sr'+(i===0?" mvp":"")+'">';
-      h2 += '<div class="rk'+rkC+'">'+(i+1)+'</div>';
-      h2 += '<div class="si">';
-      h2 += '<div class="sn">'+s.player+'号 <span class="gd gd-'+s.grade+'">'+s.grade+'</span> '+s.role+'</div>';
-      h2 += '<div class="sm">Team:'+s.team_win+' Vote:'+s.vote_accuracy+' Action:'+s.key_actions+' Live:'+s.survival+'</div>';
-      if (s.highlights && s.highlights.length) h2 += '<div class="sh">'+s.highlights.join(" | ")+'</div>';
-      h2 += '</div>';
-      var sc = s.total>=80?"var(--good)":(s.total>=50?"var(--text)":"var(--bad)");
-      h2 += '<div class="sc"><div class="num" style="color:'+sc+'">'+s.total+'</div></div>';
-      h2 += '</div>';
-    }
-    sb.innerHTML = h2;
-    sb.style.display = "block";
-  } else {
-    el("goRecap").textContent = (recap && recap.summary) || "游戏结束，感谢观看！";
+    renderRecapBoard(recap);
+  } else if (recap && recap.summary) {
+    el("goRecap").textContent = recap.summary;
     el("goStats").style.display = "none";
     el("goScoreboard").style.display = "none";
+  } else {
+    el("goRecap").textContent = "游戏结束，感谢观看！";
+    el("goStats").style.display = "none";
+    el("goScoreboard").style.display = "none";
+    // Fallback: try direct API fetch
+    setTimeout(function() { fetchRecapAndShow(); }, 500);
   }
 
   overlay.classList.add("show");
@@ -681,6 +664,49 @@ async function fetchHighlights() {
       list.innerHTML = h;
     }
   } catch(e) {}
+}
+
+
+
+async function fetchRecapAndShow() {
+  if (!gid) return;
+  try {
+    var r = await fetch("/api/game/"+gid+"/recap");
+    var d = await r.json();
+    if (!d.error) {
+      lastState = lastState || {};
+      lastState.recap = d;
+      renderRecapBoard(d);
+    }
+  } catch(e) { console.error("fetchRecap error:", e); }
+}
+
+function renderRecapBoard(recap) {
+  var el2 = document.getElementById;
+  el2("goRecap").textContent = (recap.overall||"").replace(/\n/g, " | ");
+  el2("goMvp").textContent = (recap.mvp||"?")+"号";
+  el2("goAvg").textContent = (recap.avg_score||"?")+"/100";
+  el2("goDays").textContent = recap.total_days||"?";
+  el2("goStats").style.display = "flex";
+
+  var sb = el2("goScoreboard");
+  var h2 = ""; var scores = recap.scores || [];
+  for (var i=0; i<scores.length; i++) {
+    var s = scores[i];
+    var rkC = ""; if(i===0)rkC=" gold"; else if(i===1)rkC=" silver"; else if(i===2)rkC=" bronze";
+    h2 += '<div class="sr'+(i===0?" mvp":"")+'">';
+    h2 += '<div class="rk'+rkC+'">'+(i+1)+'</div>';
+    h2 += '<div class="si">';
+    h2 += '<div class="sn">'+s.player+'号 <span class="gd gd-'+s.grade+'">'+s.grade+'</span> '+s.role+'</div>';
+    h2 += '<div class="sm">Team:'+s.team_win+' Vote:'+s.vote_accuracy+' Action:'+s.key_actions+' Live:'+s.survival+'</div>';
+    if (s.highlights && s.highlights.length) h2 += '<div class="sh">'+s.highlights.join(" | ")+'</div>';
+    h2 += '</div>';
+    var sc = s.total>=80?"var(--good)":(s.total>=50?"var(--text)":"var(--bad)");
+    h2 += '<div class="sc"><div class="num" style="color:'+sc+'">'+s.total+'</div></div>';
+    h2 += '</div>';
+  }
+  sb.innerHTML = h2;
+  sb.style.display = "block";
 }
 
 // Init
