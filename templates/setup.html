@@ -270,6 +270,47 @@ select {
   transition: all .3s cubic-bezier(.4,0,.2,1);
   letter-spacing: 3px; position: relative; overflow: hidden;
 }
+.btn-benchmark {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, rgba(212,168,67,.15), rgba(200,160,100,.1));
+  border: 1px solid rgba(212,168,67,.25);
+  border-radius: 30px; color: var(--god);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  text-decoration: none; transition: all .3s; position: relative;
+  overflow: hidden; letter-spacing: 1px;
+}
+.btn-benchmark:hover { background: linear-gradient(135deg, rgba(212,168,67,.25), rgba(200,160,100,.18)); border-color: rgba(212,168,67,.4); }
+.benchmark-panel {
+  margin-top: 30px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: left;
+}
+.bench-header { margin-bottom: 16px; }
+.bench-header h3 { color: var(--text); font-size: 16px; margin-bottom: 4px; }
+.bench-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; font-size: 13px; }
+.bench-controls button {
+  padding: 6px 18px;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all .2s;
+}
+.bench-controls button:hover { border-color: var(--border-strong); background: var(--bg-card-hover); }
+.bench-progress { margin: 12px 0; }
+.bench-bar-wrap { height: 8px; background: var(--bg-input); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.bench-bar-fill { height: 100%; background: linear-gradient(90deg, var(--god), var(--accent)); border-radius: 4px; transition: width .3s; width: 0%; }
+.bench-text { font-size: 11px; color: var(--text-dim); }
+.bench-results { margin-top: 16px; }
+.bench-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+.bench-table th { color: var(--text-dim); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.bench-table td { color: var(--text); padding: 5px 8px; border-bottom: 1px solid var(--border); }
 .btn-primary {
   background: linear-gradient(135deg, #8b1a1a, #c0392b 40%, #e63946);
   color: #fff;
@@ -416,13 +457,36 @@ select {
     <div class="player-grid" id="personalityGrid"></div>
   </div>
 
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
   <button class="btn btn-primary" id="btnStart" onclick="startGame()">🌙 开 始 游 戏</button>
+  <button class="btn btn-benchmark" id="btnBench" onclick="toggleBenchmark()">📊 多局实验</button>
+</div>
   <p class="footer-note">
     <span class="comp comp-wolf">🐺 2 狼人</span>
     <span class="comp comp-god">🔮 1 预言家</span>
     <span class="comp comp-god">🧪 1 女巫</span>
     <span class="comp comp-villager">👤 3 村民</span>
   </p>
+</div>
+
+<div class="benchmark-panel" id="benchmarkPanel" style="display:none">
+  <div class="bench-header">
+    <h3>📊 多局实验 (Benchmark)</h3>
+    <p style="font-size:12px;color:var(--text-dim)">自动运行 N 局游戏并汇总统计数据</p>
+  </div>
+  <div class="bench-controls">
+    <label>局数: <input type="number" id="benchGames" value="5" min="1" max="100" style="width:70px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;"></label>
+    <button id="btnBenchStart" onclick="startBenchmark()">▶ 开始实验</button>
+    <button id="btnBenchStop" onclick="stopBenchmark()" style="display:none">⏩ 停止</button>
+  </div>
+  <div class="bench-progress" id="benchProgress" style="display:none">
+    <div class="bench-bar-wrap"><div class="bench-bar-fill" id="benchBarFill"></div></div>
+    <span class="bench-text" id="benchText"></span>
+  </div>
+  <div class="bench-results" id="benchResults" style="display:none">
+    <div id="benchStats"></div>
+    <div id="benchTable"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -508,6 +572,89 @@ async function startGame(){
     else{showToast("创建游戏失败","error");btn.disabled=false;btn.textContent="🌙 开 始 游 戏";loading(false)}
   }catch(e){showToast("网络错误: "+e.message,"error");btn.disabled=false;btn.textContent="🌙 开 始 游 戏";loading(false)}
 }
+
+
+var benchBid = null;
+var benchPollTimer = null;
+function toggleBenchmark() {
+  var p = document.getElementById("benchmarkPanel");
+  p.style.display = p.style.display === "none" ? "block" : "none";
+}
+function stopBenchmark() {
+  if (benchPollTimer) { clearInterval(benchPollTimer); benchPollTimer = null; }
+  document.getElementById("btnBenchStart").style.display = "";
+  document.getElementById("btnBenchStop").style.display = "none";
+  document.getElementById("benchProgress").style.display = "none";
+  document.getElementById("benchText").textContent = "已停止";
+}
+async function startBenchmark() {
+  var n = parseInt(document.getElementById("benchGames").value) || 5;
+  var btnS = document.getElementById("btnBenchStart");
+  var btnSt = document.getElementById("btnBenchStop");
+  var prog = document.getElementById("benchProgress");
+  var res = document.getElementById("benchResults");
+  btnS.style.display = "none";
+  btnSt.style.display = "";
+  prog.style.display = "block";
+  res.style.display = "none";
+  document.getElementById("benchText").textContent = "启动中...";
+
+  try {
+    var r = await fetch("/api/benchmark/start", {
+      method: "POST",
+      headers: {"Content-Type": "application/x-www-form-urlencoded"},
+      body: "games_count=" + n + "&provider=mock&apikey="
+    });
+    var d = await r.json();
+    benchBid = d.benchmark_id;
+    document.getElementById("benchText").textContent = "已启动 " + n + " 局实验...";
+    benchPollTimer = setInterval(pollBenchProgress, 3000);
+  } catch(e) {
+    document.getElementById("benchText").textContent = "错误: " + e.message;
+    stopBenchmark();
+  }
+}
+async function pollBenchProgress() {
+  if (!benchBid) return;
+  try {
+    var r = await fetch("/api/benchmark/" + benchBid + "/results");
+    var d = await r.json();
+    if (d.error) {
+      // still running, check progress
+      var pr = await fetch("/api/benchmark/" + benchBid + "/progress");
+      var p = await pr.json();
+      document.getElementById("benchText").textContent = "已完成 " + (p.current||0) + "/" + (p.total||0);
+      var fill = document.getElementById("benchBarFill");
+      if (p.total > 0) fill.style.width = ((p.current||0)/p.total*100) + "%";
+    } else {
+      // done!
+      clearInterval(benchPollTimer);
+      benchPollTimer = null;
+      document.getElementById("btnBenchStart").style.display = "";
+      document.getElementById("btnBenchStop").style.display = "none";
+      document.getElementById("benchProgress").style.display = "none";
+      document.getElementById("benchResults").style.display = "block";
+      showBenchResults(d);
+    }
+  } catch(e) {}
+}
+function showBenchResults(d) {
+  var total = d.total_games || 0;
+  var h = "<p><strong>完成 " + total + " 局实验</strong></p>";
+  h += "<table class="bench-table">";
+  h += "<tr><th>指标</th><th>数值</th></tr>";
+  h += "<tr><td>狼人胜率</td><td>" + Math.round((d.werewolf_win_rate||0)*100) + "%</td></tr>";
+  h += "<tr><td>好人胜率</td><td>" + Math.round((d.villager_win_rate||0)*100) + "%</td></tr>";
+  h += "<tr><td>平均游戏天数</td><td>" + (d.average_game_length_days||0) + "</td></tr>";
+  h += "<tr><td>狼人识别准确率</td><td>" + Math.round((d.wolf_identification_accuracy||0)*100) + "%</td></tr>";
+  h += "<tr><td>投票准确率</td><td>" + Math.round((d.vote_accuracy||0)*100) + "%</td></tr>";
+  h += "<tr><td>平均得分</td><td>" + (d.average_score||0) + "/100</td></tr>";
+  var sr = d.survival_rates_by_role || {};
+  for (var role in sr) { h += "<tr><td>" + role + "存活率</td><td>" + Math.round(sr[role]*100) + "%</td></tr>"; }
+  h += "</table>";
+  document.getElementById("benchStats").innerHTML = h;
+}
+
 
 renderRoleGrid();
 renderPersonalityGrid();

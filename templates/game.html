@@ -339,6 +339,31 @@ body {
 .go-stats strong { color: var(--text); }
 .go-scoreboard { max-width: 560px; width: 100%; max-height: 240px; overflow-y: auto; margin-top: 12px; text-align: left; }
 .go-scoreboard .sr { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; margin-bottom: 3px; background: rgba(255,255,255,.04); }
+.go-analysis {
+  background: rgba(18,18,44,.45);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: left;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.go-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--god);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+.go-analysis-item {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+.go-analysis-item strong {
+  color: var(--text);
+}
 .go-scoreboard .sr.mvp { border: 1px solid var(--warn); background: rgba(240,165,0,.08); }
 .go-scoreboard .sr .rk { font-size: 15px; font-weight: 800; width: 22px; text-align: center; flex-shrink: 0; color: var(--text-dim); }
 .go-scoreboard .sr .rk.gold { color: var(--warn); }
@@ -611,7 +636,11 @@ function updateChatLog(logData) {
       h += '<div class="body"><div class="meta">'+m.player+'号 发言</div>';
       h += '<div class="content">'+m.msg+'</div></div></div>';
     }
-    else if (t==="vote") { h += '<div class="msg-vote">🗳️ '+m.msg+'</div>'; }
+    else if (t==="vote") { var vh = '<div class="msg-vote">🗳️ '+m.msg;
+      if (m.confidence !== undefined) vh += ' <small>' + Math.round(m.confidence*100) + '%</small>';
+      if (m.reason) vh += '<br><span class="v-reason">' + m.reason + '</span>';
+      vh += '</div>';
+      h += vh; }
   }
   cont.innerHTML = h;
   cont.scrollTop = cont.scrollHeight;
@@ -650,6 +679,7 @@ function showGameOver() {
   var recap = lastState.recap;
   if (recap && recap.scores) {
     renderRecapBoard(recap);
+    if (recap.analysis) renderAnalysis(recap.analysis);
   } else if (recap && recap.summary) {
     el("goRecap").textContent = recap.summary;
     el("goStats").style.display = "none";
@@ -665,6 +695,43 @@ function showGameOver() {
   overlay.classList.add("show");
   el("btnStep").disabled = true;
   el("btnAuto").disabled = true;
+}
+
+function renderAnalysis(analysis) {
+  if (!analysis) return;
+  var el2 = document.getElementById;
+  var panel = el2("goAnalysis");
+  var content = el2("goAnalysisContent");
+  if (!panel || !content) return;
+  panel.style.display = "block";
+
+  var h = "";
+  var wc = analysis.winner_camp || "";
+  h += '<div class="go-analysis-item"><strong>' + chr(32988) + chr(21033) + chr(38453) + chr(33829) + ':</strong> ' + wc + '</div>';
+
+  if (analysis.best_deception) {
+    var bd = analysis.best_deception;
+    h += '<div class="go-analysis-item"><strong>' + chr(26368) + chr(20339) + chr(27450) + chr(39575) + ':</strong> ' + bd.player + chr(21495) + ' (' + bd.role + ', ' + bd.score + chr(20998) + ')</div>';
+  }
+  if (analysis.best_judge) {
+    var bj = analysis.best_judge;
+    h += '<div class="go-analysis-item"><strong>' + chr(26368) + chr(20339) + chr(21028) + chr(26029) + ':</strong> ' + bj.player + chr(21495) + ' (' + bj.role + ', ' + bj.score + chr(20998) + ')</div>';
+  }
+  if (analysis.worst_mistake) {
+    var wm = analysis.worst_mistake;
+    h += '<div class="go-analysis-item"><strong>' + chr(26368) + chr(22823) + chr(22833) + chr(35823) + ':</strong> ' + wm.player + chr(21495) + ' (' + wm.role + ', ' + wm.score + chr(20998) + ')</div>';
+  }
+  if (analysis.decisive_vote) {
+    var dv = analysis.decisive_vote;
+    if (dv.day) h += '<div class="go-analysis-item"><strong>' + chr(20915) + chr(23450) + chr(24615) + chr(25237) + chr(31080) + ':</strong> Day ' + dv.day + ' - ' + dv.target + chr(21495) + chr(34987) + chr(25918) + chr(36880) + '</div>';
+  }
+  var tps = analysis.turning_points || [];
+  for (var i = 0; i < Math.min(tps.length, 3); i++) {
+    var tp = tps[i];
+    h += '<div class="go-analysis-item"><strong>' + chr(20851) + chr(38190) + chr(36716) + chr(25240) + ':</strong> Day ' + tp.day + ' - ' + tp.event + '</div>';
+  }
+
+  content.innerHTML = h || '<div class="go-analysis-item">' + chr(26080) + chr(29305) + chr(27530) + chr(20107) + chr(20214) + '</div>';
 }
 
 async function fetchHighlights() {
@@ -732,6 +799,9 @@ function renderRecapBoard(recap) {
   }
   sb.innerHTML = h2;
   sb.style.display = "block";
+
+  var analysis = recap.analysis;
+  if (analysis) renderAnalysis(analysis);
 }
 
 // Init
