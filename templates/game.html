@@ -3,272 +3,640 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WolfAgent - 游戏进行中</title>
+<title>WolfAgent · 月下狼人杀</title>
 <style>
-:root{--bg:#0f0f1a;--card:#1a1a2e;--accent:#e94560;--accent2:#0f3460;--text:#e0e0e0;--text-dim:#8888aa;--border:#2a2a4a;--good:#4ecca3;--bad:#e94560;--warn:#f0a500}
+:root {
+  --bg: #0a0a14;
+  --card: #12122a;
+  --card2: #161635;
+  --wolf: #c0392b;
+  --wolf-dim: rgba(192,57,43,.18);
+  --god: #d4a843;
+  --god-dim: rgba(212,168,67,.15);
+  --villager: #5b8c5a;
+  --villager-dim: rgba(91,140,90,.12);
+  --accent: #e94560;
+  --text: #e8e6e3;
+  --text-dim: #7a7a9a;
+  --text-muted: #555570;
+  --border: #252545;
+  --border-glow: #3a3a60;
+  --good: #4ecca3;
+  --bad: #e94560;
+  --warn: #f0a500;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
-.app{display:flex;height:100vh}
-.sidebar{width:340px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-.sidebar-header{padding:16px 20px;border-bottom:1px solid var(--border)}
-.sidebar-header h2{font-size:14px;color:var(--text-dim)}
-.player-list{flex:1;overflow-y:auto;padding:8px}
-.player-card{background:#0d0d1f;border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid transparent;cursor:pointer;transition:all .2s}
-.player-card:hover{border-color:var(--border)}
-.player-card.selected{border-color:var(--accent);background:#111128}
-.player-card.dead{opacity:.4}
-.player-card .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.player-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+body{
+  font-family: 'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+/* ── 星空背景 ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 30% 25%, rgba(255,255,255,.4), transparent),
+    radial-gradient(1.5px 1.5px at 50% 10%, rgba(255,255,255,.6), transparent),
+    radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,.4), transparent),
+    radial-gradient(1px 1px at 90% 20%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1.5px 1.5px at 20% 60%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 45% 70%, rgba(255,255,255,.4), transparent),
+    radial-gradient(1px 1px at 80% 75%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 60% 85%, rgba(255,255,255,.4), transparent);
+  pointer-events: none; z-index: 0;
+}
+
+.app{display:flex;height:100vh;position:relative;z-index:1}
+
+/* ── 侧边栏 ── */
+.sidebar{
+  width: 350px;
+  background: linear-gradient(180deg, var(--card), #0e0e24);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden; flex-shrink: 0;
+}
+.sidebar-header{
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.sidebar-header::after{
+  content:'';position:absolute;bottom:0;left:20px;right:20px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--wolf)40,transparent);
+}
+.sidebar-header h2{
+  font-size: 14px; color: var(--text-dim); letter-spacing: 1px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-header h2 .title-icon{font-size:18px}
+
+.player-list{flex:1;overflow-y:auto;padding:10px 12px}
+.player-list::-webkit-scrollbar{width:4px}
+.player-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+.player-card{
+  background: var(--card); border-radius: 14px;
+  padding: 14px 16px; margin-bottom: 8px;
+  border: 1px solid transparent; cursor: pointer;
+  transition: all .25s;
+}
+.player-card:hover{border-color: var(--border); background: var(--card2)}
+.player-card.selected{border-color: var(--accent); background: var(--card2); box-shadow: 0 0 20px rgba(233,69,96,.1)}
+.player-card.dead{opacity: .4; filter: grayscale(.6)}
+.player-card .head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.player-num{
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,.3);
+}
 .player-card .info{flex:1}
 .player-card .name{font-size:14px;font-weight:600}
-.player-card .role-hint{font-size:11px;color:var(--text-dim)}
-.player-card .status{font-size:11px;padding:2px 8px;border-radius:6px}
-.status-alive{background:var(--good)22;color:var(--good)}
-.status-dead{background:var(--bad)22;color:var(--bad)}
-.belief-bars{display:none;margin-top:8px}
+.player-card .role-hint{font-size:11px;color:var(--text-dim);margin-top:2px}
+.player-card .status{font-size:11px;padding:3px 10px;border-radius:8px;font-weight:600;letter-spacing:.5px}
+.status-alive{background:var(--good)18;color:var(--good)}
+.status-dead{background:var(--bad)18;color:var(--bad)}
+
+.belief-bars{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .player-card.selected .belief-bars{display:block}
-.belief-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px}
-.belief-row .label{width:24px;color:var(--text-dim)}
-.belief-row .bar-wrap{flex:1;height:14px;background:#1a1a2e;border-radius:4px;overflow:hidden}
-.belief-row .bar-fill{height:100%;border-radius:4px;transition:width .3s}
-.belief-row .pct{width:32px;text-align:right;color:var(--text-dim)}
-.reasoning-box{display:none;margin-top:8px}
+.belief-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px}
+.belief-row .blabel{width:26px;color:var(--text-dim);text-align:right}
+.belief-row .bar-wrap{flex:1;height:6px;background:var(--card);border-radius:3px;overflow:hidden}
+.belief-row .bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.belief-row .pct{width:34px;text-align:right;color:var(--text-dim);font-size:10px}
+
+.reasoning-box{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .player-card.selected .reasoning-box{display:block}
-.reasoning-box .r-title{font-size:10px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase}
-.reasoning-box .r-item{font-size:11px;color:var(--text-dim);padding:2px 0 2px 8px;border-left:2px solid var(--accent)}
+.reasoning-box .r-title{
+  font-size:10px;color:var(--text-dim);margin-bottom:6px;
+  text-transform:uppercase;letter-spacing:1.5px
+}
+.reasoning-box .r-item{
+  font-size:11px;color:var(--text-muted);padding:3px 0 3px 10px;
+  border-left:2px solid var(--accent);margin-bottom:2px
+}
+
+/* ── 主区域 ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.top-bar{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-shrink:0}
-.top-bar .phase-badge{font-size:12px;padding:4px 12px;border-radius:8px;background:var(--accent2);color:var(--accent);font-weight:600}
-.top-bar .day-badge{font-size:12px;padding:4px 12px;border-radius:8px;background:#1a1a2e;color:var(--text-dim)}
-.top-bar .alive-badge{font-size:12px;padding:4px 12px;border-radius:8px;background:#1a1a2e;color:var(--good)}
+
+/* ── 顶部栏 ── */
+.top-bar{
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(18,18,42,.6), transparent);
+}
+.top-bar .title-area{display:flex;align-items:center;gap:10px}
+.top-bar .title-icon{font-size:22px}
+.top-bar .title-text{font-size:15px;font-weight:700;letter-spacing:2px;color:var(--text)}
+.phase-row{display:flex;gap:8px;align-items:center}
+.phase-badge{
+  font-size: 12px; padding: 5px 14px; border-radius: 10px;
+  font-weight: 600; letter-spacing: 1px;
+  transition: all .3s;
+}
+.phase-night{background: #1a1030; color: #b8a0e0; border: 1px solid #b8a0e030}
+.phase-day{background: #1a2a20; color: var(--good); border: 1px solid var(--good)30}
+.phase-vote{background: #2a1a10; color: var(--warn); border: 1px solid var(--warn)30}
+.phase-over{background: #201010; color: var(--bad); border: 1px solid var(--bad)30}
+.day-badge{font-size:12px;padding:5px 14px;border-radius:10px;background:var(--card);color:var(--text-dim);letter-spacing:1px}
+.alive-count{font-size:12px;padding:5px 14px;border-radius:10px;background:var(--card);color:var(--good);letter-spacing:1px;display:flex;align-items:center;gap:6px}
+.alive-count .dot-live{width:7px;height:7px;border-radius:50%;background:var(--good);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .top-bar .spacer{flex:1}
-.chat-log{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
-.chat-msg{display:flex;gap:10px;padding:6px 0;animation:fadeIn .3s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.chat-msg .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0}
+
+/* ── 高亮横幅 ── */
+.highlight-banner{
+  display:none;
+  margin:0 24px;margin-top:12px;
+  background:linear-gradient(135deg, #1a1030, #1a1a2e);
+  border:1px solid var(--wolf)40;
+  border-radius:14px;
+  padding:14px 20px;
+  flex-shrink:0;
+}
+.highlight-banner .hl-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.highlight-banner .hl-header span{font-size:12px;color:var(--god);font-weight:600;letter-spacing:1px}
+.highlight-banner .hl-body{font-size:13px;color:var(--text-dim);line-height:1.5}
+.highlight-list{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.highlight-tag{
+  font-size:11px;padding:3px 10px;border-radius:8px;
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text-dim);display:flex;align-items:center;gap:4px
+}
+.highlight-tag .hl-score{color:var(--god)}
+
+/* ── 聊天日志 ── */
+.chat-log{
+  flex:1;overflow-y:auto;padding:12px 24px 16px;
+  display:flex;flex-direction:column;gap:3px;
+  scroll-behavior:smooth;
+}
+.chat-log::-webkit-scrollbar{width:4px}
+.chat-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+.chat-msg{display:flex;gap:12px;padding:8px 0;animation:fadeUp .35s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg .avatar{
+  width:30px;height:30px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:12px;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.3)
+}
 .chat-msg .body{flex:1}
-.chat-msg .meta{font-size:11px;color:var(--text-dim);margin-bottom:2px}
-.chat-msg .content{font-size:14px;line-height:1.5}
-.msg-system{text-align:center;color:var(--text-dim);font-size:12px;padding:8px 0}
-.msg-night{text-align:center;color:var(--warn);font-size:12px;padding:8px 0}
-.msg-gameover{text-align:center;font-size:20px;font-weight:800;padding:20px 0}
+.chat-msg .meta{font-size:11px;color:var(--text-dim);margin-bottom:3px}
+.chat-msg .content{font-size:14px;line-height:1.6;color:var(--text)}
+
+.msg-system{text-align:center;color:var(--text-dim);font-size:12px;padding:6px 0;letter-spacing:.5px}
+.msg-night{text-align:center;color:#b8a0e0;font-size:12px;padding:6px 0;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px}
+.msg-night::before,.msg-night::after{content:'';width:40px;height:1px;background:linear-gradient(90deg,transparent,#b8a0e040,#b8a0e040,transparent)}
+.msg-death{text-align:center;color:var(--bad);font-size:13px;padding:6px 0;font-weight:600;letter-spacing:.5px}
+.msg-vote{text-align:center;color:var(--text-muted);font-size:11px;padding:4px 0}
+.msg-gameover{text-align:center;font-size:22px;font-weight:900;padding:16px 0;letter-spacing:2px}
 .msg-gameover.win-villagers{color:var(--good)}
 .msg-gameover.win-werewolves{color:var(--bad)}
-.msg-speech{color:var(--text)}
-.bottom-bar{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-shrink:0}
-.btn{padding:10px 24px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{opacity:.85}
-.btn-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{border-color:var(--accent)}
-.btn:disabled{opacity:.3;cursor:not-allowed}
-.day-sep{display:flex;align-items:center;gap:12px;padding:8px 0}
+
+.day-sep{display:flex;align-items:center;gap:14px;padding:6px 0}
 .day-sep hr{flex:1;border:none;border-top:1px solid var(--border)}
-.day-sep span{font-size:11px;color:var(--text-dim);white-space:nowrap}
+.day-sep span{font-size:11px;color:var(--text-muted);white-space:nowrap;letter-spacing:1px}
+
+/* ── 底部栏 ── */
+.bottom-bar{
+  padding:14px 24px;
+  border-top:1px solid var(--border);
+  display:flex;gap:12px;align-items:center;
+  flex-shrink:0;
+  background:linear-gradient(0deg, rgba(18,18,42,.6), transparent);
+}
+.btn{
+  padding:10px 22px;border-radius:10px;border:none;
+  font-size:14px;font-weight:600;cursor:pointer;
+  transition:all .25s;font-family:inherit;letter-spacing:.5px;
+}
+.btn-primary{background:linear-gradient(135deg,var(--wolf),var(--accent));color:#fff;box-shadow:0 4px 16px var(--wolf)30}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--wolf)45}
+.btn-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+
+/* ── 游戏结束覆盖层 ── */
+.gameover-overlay{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(10,10,20,.85);
+  z-index:100;
+  justify-content:center;align-items:center;
+  flex-direction:column;gap:16px;
+}
+.gameover-overlay.show{display:flex}
+.gameover-overlay .go-title{font-size:36px;font-weight:900;letter-spacing:4px}
+.gameover-overlay .go-sub{font-size:14px;color:var(--text-dim);letter-spacing:2px}
+.gameover-overlay .go-recap{
+  max-width:500px;text-align:center;font-size:14px;line-height:1.7;
+  color:var(--text-dim);margin-top:8px;
+  background:var(--card);border-radius:14px;padding:20px 28px;
+  border:1px solid var(--border);
+}
+.gameover-overlay .go-btn{
+  margin-top:12px;padding:12px 36px;border-radius:12px;
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text);font-size:14px;font-weight:600;cursor:pointer;
+  font-family:inherit;letter-spacing:1px;transition:all .25s;
+}
+.gameover-overlay .go-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+
+/* Recap Panel */
+.recap-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center}
+.recap-panel{background:var(--card);border-radius:16px;padding:28px 32px;max-width:700px;width:90%;max-height:85vh;overflow-y:auto;border:1px solid var(--border);animation:slideUp .4s}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+.recap-header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.recap-header h2{font-size:22px;margin-bottom:8px}
+.recap-header .winner-text{font-size:16px;color:var(--accent)}
+.recap-header .recap-stats{display:flex;gap:24px;justify-content:center;margin-top:12px;font-size:13px;color:var(--text-dim)}
+.recap-stats span strong{color:var(--text)}
+.recap-scoreboard{margin-bottom:20px}
+.recap-scoreboard h3{font-size:14px;color:var(--text-dim);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+.score-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:#0d0d1f;border:1px solid transparent;transition:all .2s}
+.score-row.mvp{border-color:var(--warn);background:#1a1a0f}
+.score-row .rank{font-size:20px;font-weight:800;width:28px;text-align:center;flex-shrink:0}
+.score-row .rank.gold{color:var(--warn)}
+.score-row .rank.silver{color:#aaa}
+.score-row .rank.bronze{color:#cd7f32}
+.score-row .s-player{flex:1}
+.score-row .s-player .s-name{font-size:14px;font-weight:600}
+.score-row .s-player .s-role{font-size:11px;color:var(--text-dim)}
+.score-row .s-player .s-highlights{font-size:11px;color:var(--text-dim);margin-top:2px}
+.score-row .s-breakdown{display:flex;gap:10px;font-size:10px;color:var(--text-dim)}
+.score-row .s-breakdown span{padding:2px 6px;background:#111128;border-radius:4px}
+.score-row .s-total{text-align:right;flex-shrink:0}
+.score-row .s-total .score-num{font-size:26px;font-weight:800;line-height:1}
+.score-row .s-total .grade-badge{font-size:11px;padding:1px 8px;border-radius:4px;font-weight:700;display:inline-block}
+.grade-s{background:var(--warn);color:#1a1a2e}
+.grade-a{background:var(--good);color:#1a1a2e}
+.grade-b{background:#5b8def;color:#fff}
+.grade-c{background:var(--text-dim);color:#1a1a2e}
+.grade-d{background:var(--bad);color:#fff}
+.recap-close{display:block;width:100%;margin-top:16px}
+
 </style>
 </head>
 <body>
 <div class="app">
-<div class="sidebar">
-<div class="sidebar-header"><h2>👥 玩家列表</h2></div>
-<div class="player-list" id="playerList"></div>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2><span class="title-icon">🌙</span> 玩家面板</h2>
+    </div>
+    <div class="player-list" id="playerList"></div>
+  </div>
+  <div class="main">
+    <div class="top-bar">
+      <div class="title-area">
+        <span class="title-icon">🐺</span>
+        <span class="title-text">月下狼人杀</span>
+      </div>
+      <div class="phase-row">
+        <span class="phase-badge phase-night" id="phaseBadge">准备中</span>
+        <span class="day-badge" id="dayBadge">第 0 天</span>
+        <span class="alive-count"><span class="dot-live"></span><span id="aliveBadge">存活：7</span></span>
+      </div>
+      <div class="spacer"></div>
+    </div>
+    <div class="highlight-banner" id="highlightBanner">
+      <div class="hl-header"><span>⭐ 精彩时刻</span></div>
+      <div class="hl-body" id="hlNarrative"></div>
+      <div class="highlight-list" id="highlightList"></div>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="bottom-bar">
+      <button class="btn btn-primary" id="btnStep" onclick="stepGame()">▶ 下一步</button>
+      <button class="btn btn-secondary" id="btnAuto" onclick="toggleAuto()">⏩ 自动</button>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:8px" id="speedHint"></span>
+    </div>
+  </div>
 </div>
-<div class="main">
-<div class="top-bar">
-<span class="phase-badge" id="phaseBadge">等待中</span>
-<span class="day-badge" id="dayBadge">第 1 天</span>
-<span class="alive-badge" id="aliveBadge">存活：7</span>
-<span class="spacer"></span>
-</div>
-<div class="chat-log" id="chatLog"><div style="text-align:center;color:var(--text-dim);padding:40px">点击「下一步」开始游戏</div></div>
-<div class="bottom-bar">
-<button class="btn btn-primary" id="btnStep" onclick="stepGame()">▶ 下一步</button>
-<button class="btn btn-secondary" id="btnAuto" onclick="toggleAuto()">⏩ 自动</button>
-<button class="btn btn-secondary" onclick="window.location='/'">🏠 返回</button>
-</div>
-</div>
+
+<div class="gameover-overlay" id="gameoverOverlay">
+  <div class="go-title" id="goTitle"></div>
+  <div class="go-sub" id="goSub"></div>
+  <div class="go-recap" id="goRecap"></div>
+  <button class="go-btn" onclick="location.href='/'"">🏠 返回首页</button>
 </div>
 
 <script>
 var gid = null;
+var selectedPlayer = 0;
 var autoPlay = false;
 var autoTimer = null;
-var selectedPlayer = 0;
 
-function getColor(n){var c=["#e94560","#f0a500","#4ecca3","#6c5ce7","#e056a0","#00b4d8","#ff6b6b"];return c[(n-1)%7]}
-
-// Parse gid from URL
-var params = new URLSearchParams(window.location.search);
-gid = params.get("gid");
-if (!gid) { window.location.href = "/"; }
+var COLORS = ["","#e94560","#f0a500","#4ecca3","#6c5ce7","#e056a0","#00b4d8","#ff6b6b"];
+function getColor(n){return COLORS[n]||"#888"}
 
 var phaseNames = {
-night_werewolf:"🌙 狼人行动",night_seer:"🌙 预言家查验",night_witch:"🌙 女巫行动",
-day_announce:"☀️ 天亮公布",day_speech:"💬 发言阶段",day_vote:"🗳️ 投票阶段",
-game_over:"🏁 游戏结束"
+  night_werewolf: "🌙 狼人行动",
+  night_seer: "🔮 预言家查验",
+  night_witch: "🧪 女巫用药",
+  day_announce: "📢 天亮公布",
+  day_speech: "💬 发言讨论",
+  day_vote: "🗳️ 投票放逐",
+  game_over: "🏁 游戏结束"
 };
 
-async function stepGame(){
-document.getElementById("btnStep").disabled = true;
-try {
-var r = await fetch("/api/game/" + gid + "/step", {method:"POST"});
-var d = await r.json();
-handleState(d);
-if (d.finished){
-document.getElementById("btnStep").disabled = true;
-document.getElementById("btnStep").textContent = "游戏结束";
-document.getElementById("btnAuto").disabled = true;
-document.getElementById("btnAuto").textContent = "游戏结束";
-if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; autoPlay = false; }
-} else {
-await refreshPlayers();
+function getPhaseClass(p){
+  if(!p) return "phase-night";
+  if(p.indexOf("night")===0) return "phase-night";
+  if(p.indexOf("day")===0) return "phase-day";
+  if(p.indexOf("vote")>=0) return "phase-vote";
+  if(p.indexOf("game_over")>=0) return "phase-over";
+  return "phase-night";
 }
-} catch(e) { console.error(e); }
-if (!d || !d.finished) document.getElementById("btnStep").disabled = false;
-}
+
+var lastState = null;
+
+function el(id){return document.getElementById(id)}
 
 async function refreshPlayers(){
-if (!gid) return;
-try {
-var r = await fetch("/api/game/" + gid + "/state");
-var d = await r.json();
-updatePlayerList(d.players || []);
-updateTopBar(d);
-if (d.log) updateChatLog(d.log);
-if (selectedPlayer) refreshAgentView(selectedPlayer);
-} catch(e){}
+  if(!gid) return;
+  try{
+    var r=await fetch("/api/game/"+gid+"/state");
+    var d=await r.json();
+    if(d.error) return;
+    lastState = d;
+    handleState(d);
+  }catch(e){}
 }
 
-async function refreshAgentView(num){
-if (!gid) return;
-try {
-var r = await fetch("/api/game/" + gid + "/state?player_num=" + num);
-var d = await r.json();
-if (d.agent_view){
-var card = document.querySelector(".player-card[data-player='" + num + "']");
-if (card){
-var bb = card.querySelector(".belief-bars");
-if (bb) bb.innerHTML = buildBeliefBars(d.agent_view.belief || {});
-var rb = card.querySelector(".reasoning-box");
-if (rb) rb.innerHTML = buildReasoning(d.agent_view.reasoning || []);
-var rh = card.querySelector(".role-hint");
-if (rh) rh.textContent = d.agent_view.role || "???";
-}
-}
-} catch(e){}
-}
-
-function buildBeliefBars(belief){
-var h = "";
-var sorted = Object.entries(belief).sort(function(a,b){return b[1]-a[1]});
-for (var i=0;i<sorted.length;i++){
-var pid=sorted[i][0], prob=sorted[i][1], pct=Math.round(prob*100);
-var color=pct>50?"var(--bad)":"var(--good)";
-h+='<div class="belief-row"><span class="label">'+pid+'号</span>';
-h+='<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
-h+='<span class="pct">'+pct+'%</span></div>';
-}
-return h||'<div style="font-size:11px;color:var(--text-dim)">暂无信念数据</div>';
+async function stepGame(){
+  if(!gid) return;
+  var btn=el("btnStep"); btn.disabled=true;
+  try{
+    var r=await fetch("/api/game/"+gid+"/step",{method:"POST"});
+    var d=await r.json();
+    if(d.finished){
+      await refreshPlayers();
+      await fetchHighlights();
+      showGameOver();
+      btn.disabled=true;
+      el("btnAuto").disabled=true;
+    }else{
+      await refreshPlayers();
+    }
+  }catch(e){console.error(e)}
+  btn.disabled=false;
 }
 
-function buildReasoning(rs){
-if(!rs||!rs.length) return '<div style="font-size:11px;color:var(--text-dim)">暂无推理数据</div>';
-var h='<div class="r-title">推理依据</div>';
-for(var i=0;i<Math.min(rs.length,8);i++){h+='<div class="r-item">'+rs[i]+'</div>'}
-return h;
-}
-
-function updatePlayerList(plist){
-var list=document.getElementById("playerList");
-var h="";
-for(var i=0;i<plist.length;i++){
-var p=plist[i];
-var cls="player-card";
-if(p.number==selectedPlayer)cls+=" selected";
-if(!p.alive)cls+=" dead";
-h+='<div class="'+cls+'" data-player="'+p.number+'" onclick="selectPlayer('+p.number+')">';
-h+='<div class="head">';
-h+='<div class="player-num" style="background:'+getColor(p.number)+'22;color:'+getColor(p.number)+'">'+p.number+'</div>';
-h+='<div class="info"><div class="name">'+p.number+'号</div>';
-h+='<div class="role-hint">'+p.role+'</div></div>';
-h+='<span class="status '+(p.alive?"status-alive":"status-dead")+'">'+(p.alive?"存活":"死亡")+'</span>';
-h+='</div>';
-h+='<div class="belief-bars"></div>';
-h+='<div class="reasoning-box"></div>';
-h+='</div>';
-}
-list.innerHTML=h;
-if(selectedPlayer) refreshAgentView(selectedPlayer);
-}
-
-function selectPlayer(num){
-document.querySelectorAll(".player-card").forEach(function(c){c.classList.remove("selected")});
-var card=document.querySelector(".player-card[data-player='"+num+"']");
-if(card){card.classList.add("selected");selectedPlayer=num;refreshAgentView(num);}
+function handleState(d){
+  updateTopBar(d);
+  if(d.players) updatePlayerList(d.players);
+  if(d.log) updateChatLog(d.log);
+  if(d.highlights && d.highlights.length > 0){
+    renderHighlights(d.highlights, d.highlight_narrative);
+  }
 }
 
 function updateTopBar(d){
-document.getElementById("phaseBadge").textContent=phaseNames[d.phase]||d.phase;
-document.getElementById("dayBadge").textContent="第 "+(d.day||1)+" 天";
-var alives=d.alive||[];
-document.getElementById("aliveBadge").textContent="存活："+alives.length;
+  var badge = el("phaseBadge");
+  badge.textContent = phaseNames[d.phase] || d.phase || "准备中";
+  badge.className = "phase-badge " + getPhaseClass(d.phase);
+  el("dayBadge").textContent = "第 " + (d.day||1) + " 天";
+  var alives = d.alive||[];
+  el("aliveBadge").textContent = "存活：" + alives.length;
 }
 
-var lastLogLen = 0;
-function handleState(d){
-updateTopBar(d);
-if(d.log) updateChatLog(d.log);
-if(d.game_over||d.finished){
-var msg=d.winner==="villagers"?"🎉 村民阵营胜利！":"🐺 狼人阵营胜利！";
-document.getElementById("chatLog").innerHTML+='<div class="msg-gameover '+(d.winner==="villagers"?"win-villagers":"win-werewolves")+'">'+msg+'</div>';
+function updatePlayerList(plist){
+  var list=el("playerList");
+  var h="";
+  for(var i=0;i<plist.length;i++){
+    var p=plist[i];
+    var cls="player-card";
+    if(p.number==selectedPlayer) cls+=" selected";
+    if(!p.alive) cls+=" dead";
+    h+='<div class="'+cls+'" data-player="'+p.number+'" onclick="selectPlayer('+p.number+')">';
+    h+='<div class="head">';
+    h+='<div class="player-num" style="background:'+getColor(p.number)+'22;color:'+getColor(p.number)+'">'+p.number+'</div>';
+    h+='<div class="info"><div class="name">'+p.number+'号</div>';
+    h+='<div class="role-hint">'+p.role+'</div></div>';
+    h+='<span class="status '+(p.alive?"status-alive":"status-dead")'">'+(p.alive?"存活":"死亡")+'</span>';
+    h+='</div>';
+    h+='<div class="belief-bars"></div>';
+    h+='<div class="reasoning-box"></div>';
+    h+='</div>';
+  }
+  list.innerHTML=h;
+  if(selectedPlayer) refreshAgentView(selectedPlayer);
 }
+
+function selectPlayer(num){
+  document.querySelectorAll(".player-card").forEach(function(c){c.classList.remove("selected")});
+  var card=document.querySelector(".player-card[data-player='"+num+"']");
+  if(card){card.classList.add("selected");selectedPlayer=num;refreshAgentView(num);}
+}
+
+async function refreshAgentView(num){
+  if(!gid) return;
+  try{
+    var r=await fetch("/api/game/"+gid+"/state?player_num="+num);
+    var d=await r.json();
+    if(d.agent_view){
+      var card=document.querySelector(".player-card[data-player='"+num+"']");
+      if(!card) return;
+      var bb=card.querySelector(".belief-bars");
+      bb.innerHTML = buildBeliefBars(d.agent_view.belief);
+      var rb=card.querySelector(".reasoning-box");
+      rb.innerHTML = buildReasoning(d.agent_view.reasoning);
+
+      // update role hint
+      var roleHint=card.querySelector(".role-hint");
+      if(roleHint) roleHint.textContent = d.agent_view.role || "???";
+    }
+  }catch(e){}
+}
+
+function buildBeliefBars(belief){
+  if(!belief) return '<div style="font-size:11px;color:var(--text-muted)">暂无信念数据</div>';
+  var sorted=Object.entries(belief).sort(function(a,b){return b[1]-a[1]});
+  var h="";
+  for(var i=0;i<sorted.length;i++){
+    var pid=sorted[i][0], prob=sorted[i][1], pct=Math.round(prob*100);
+    var color=pct>50?"var(--bad)":"var(--good)";
+    h+='<div class="belief-row"><span class="blabel">'+pid+'号</span>';
+    h+='<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+    h+='<span class="pct">'+pct+'%</span></div>';
+  }
+  return h||'<div style="font-size:11px;color:var(--text-muted)">暂无信念数据</div>';
+}
+
+function buildReasoning(rs){
+  if(!rs||!rs.length) return '<div style="font-size:11px;color:var(--text-muted)">暂无推理数据</div>';
+  var h='<div class="r-title">推理依据</div>';
+  for(var i=0;i<Math.min(rs.length,8);i++){h+='<div class="r-item">'+rs[i]+'</div>'}
+  return h;
+}
+
+async function fetchHighlights(){
+  if(!gid) return;
+  try{
+    var r = await fetch('/api/game/' + gid + '/highlights');
+    var d = await r.json();
+    if(d.has_highlights && d.highlights.length > 0){
+      renderHighlights(d.highlights, d.narrative);
+    }
+  }catch(e){}
+}
+
+function renderHighlights(highlights, narrative){
+  var banner = el('highlightBanner');
+  banner.style.display = 'block';
+  if(narrative) el('hlNarrative').textContent = narrative;
+  var list = el('highlightList');
+  var h = '';
+  for(var i = 0; i < highlights.length; i++){
+    var hl = highlights[i];
+    h += '<div class="highlight-tag" title="' + hl.description + '">';
+    h += '<span>' + hl.emoji + '</span>';
+    h += '<span>' + hl.title + '</span>';
+    h += '<span class="hl-score">' + hl.score + '</span>';
+    h += '</div>';
+  }
+  list.innerHTML = h;
 }
 
 function updateChatLog(logData){
-var cont=document.getElementById("chatLog");
-var h="";
-var lastDay=0;
-for(var i=0;i<logData.length;i++){
-var m=logData[i];
-var d=m.day||0;
-if(d&&d!==lastDay){lastDay=d;h+='<div class="day-sep"><hr><span>📅 第 '+d+' 天</span><hr></div>'}
-var t=m.type;
-if(t==="info"){h+='<div class="msg-system">'+m.msg+'</div>'}
-else if(t==="night"){h+='<div class="msg-night">'+m.msg+'</div>'}
-else if(t==="death"){h+='<div class="msg-system">💀 '+m.msg+'</div>'}
-else if(t==="gameover"){
-var cls=m.msg.indexOf("村民")>=0?"win-villagers":"win-werewolves";
-h+='<div class="msg-gameover '+cls+'">'+m.msg+'</div>';
-}
-else if(t==="speech"){
-h+='<div class="chat-msg"><div class="avatar" style="background:'+getColor(m.player)+'22;color:'+getColor(m.player)+'">'+m.player+'</div>';
-h+='<div class="body"><div class="meta">'+m.player+'号 发言</div>';
-h+='<div class="content">'+m.msg+'</div></div></div>';
-}
-else if(t==="vote"){
-h+='<div class="msg-system">🗳️ '+m.msg+'</div>';
-}
-}
-cont.innerHTML=h;
-cont.scrollTop=cont.scrollHeight;
+  var cont=el("chatLog");
+  var h="";
+  var lastDay=0;
+  for(var i=0;i<logData.length;i++){
+    var m=logData[i];
+    var d=m.day||0;
+    if(d&&d!==lastDay){lastDay=d;h+='<div class="day-sep"><hr><span>📅 第 '+d+' 天</span><hr></div>'}
+    var t=m.type;
+    if(t==="info"){h+='<div class="msg-system">'+m.msg+'</div>'}
+    else if(t==="night"){h+='<div class="msg-night">🌙 '+m.msg+'</div>'}
+    else if(t==="death"){h+='<div class="msg-death">💀 '+m.msg+'</div>'}
+    else if(t==="gameover"){
+      var cls=m.msg.indexOf("村民")>=0?"win-villagers":"win-werewolves";
+      h+='<div class="msg-gameover '+cls+'">'+m.msg+'</div>';
+    }
+    else if(t==="speech"){
+      h+='<div class="chat-msg"><div class="avatar" style="background:'+getColor(m.player)+'22;color:'+getColor(m.player)+'">'+m.player+'</div>';
+      h+='<div class="body"><div class="meta">'+m.player+'号 发言</div>';
+      h+='<div class="content">'+m.msg+'</div></div></div>';
+    }
+    else if(t==="vote"){
+      h+='<div class="msg-vote">🗳️ '+m.msg+'</div>';
+    }
+  }
+  cont.innerHTML=h;
+  cont.scrollTop=cont.scrollHeight;
 }
 
 function toggleAuto(){
-autoPlay=!autoPlay;
-var btn=document.getElementById("btnAuto");
-if(autoPlay){btn.textContent="⏸️ 停止";stepAuto();}
-else{btn.textContent="⏩ 自动";if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}}
+  autoPlay=!autoPlay;
+  var btn=el("btnAuto");
+  if(autoPlay){
+    btn.textContent="⏸️ 停止";
+    el("speedHint").textContent="自动进行中...";
+    stepAuto();
+  }else{
+    btn.textContent="⏩ 自动";
+    el("speedHint").textContent="";
+    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  }
 }
 
 function stepAuto(){
-if(!autoPlay)return;
-stepGame().then(function(){
-autoTimer=setTimeout(stepAuto,300);
-});
+  if(!autoPlay) return;
+  stepGame().then(function(){
+    if(autoPlay) autoTimer=setTimeout(stepAuto,500);
+  });
 }
+
+function showGameOver(){
+  if(!lastState) return;
+  var overlay=el("gameoverOverlay");
+  var isVillagers=lastState.winner==="villagers";
+  el("goTitle").textContent=isVillagers?"🎉 村民阵营胜利！":"🐺 狼人阵营胜利！";
+  el("goTitle").style.color=isVillagers?"var(--good)":"var(--bad)";
+  el("goSub").textContent="第 "+(lastState.day||1)+" 天结束";
+  
+  var recap=lastState.recap||null;
+  if(recap&&recap.scores){
+    el("goRecap").textContent=(recap.overall||"").replace(/\\n/g," | ");
+    el("goMvp").textContent=(recap.mvp||"?")+"号 "+(recap.scores[0]?recap.scores[0].grade:"?");
+    el("goAvg").textContent=(recap.avg_score||"?")+"/100";
+    el("goDays").textContent=recap.total_days||"?";
+    var sb=el("goScoreboard");
+    var h2="";
+    var scores=recap.scores;
+    for(var i=0;i<scores.length;i++){
+      var s=scores[i];
+      var rc="";
+      if(i===0)rc=" gold";
+      else if(i===1)rc=" silver";
+      else if(i===2)rc=" bronze";
+      var gc="grade-"+s.grade.toLowerCase();
+      h2+='<div class="score-row'+(i===0?" mvp":"")+'">';
+      h2+='<div class="s-rank'+rc+'">'+(i+1)+'</div>';
+      h2+='<div class="s-info">';
+      h2+='<div class="s-name">'+s.player+'号 <span class="grade '+gc+'">'+s.grade+'</span></div>';
+      h2+='<div class="s-meta">'+s.role+' | Team:'+s.team_win+' Vote:'+s.vote_accuracy+' Action:'+s.key_actions+' Live:'+s.survival+'</div>';
+      if(s.highlights&&s.highlights.length)h2+='<div class="s-hl">'+s.highlights.join(" | ")+'</div>';
+      h2+='</div>';
+      var sc=s.total>=80?"var(--good)":(s.total>=50?"var(--text)":"var(--bad)");
+      h2+='<div class="s-score"><div class="num" style="color:'+sc+'">'+s.total+'</div></div>';
+      h2+='</div>';
+    }
+    sb.innerHTML=h2;
+    el("goScoreboard").style.display="block";
+  }else{
+    el("goRecap").textContent=recap||"";
+    el("goScoreboard").style.display="none";
+  }
+  
+  overlay.classList.add("show");
+  el("btnStep").disabled=true;
+  el("btnAuto").disabled=true;
+}
+
+async function fetchHighlights(){
+  if(!gid) return;
+  try{
+    var r=await fetch("/api/game/"+gid+"/highlights");
+    var d=await r.json();
+    if(d.has_highlights){
+      var banner=el("highlightBanner");
+      banner.style.display="block";
+      el("hlNarrative").textContent=d.narrative||"";
+      var list=el("highlightList");
+      var h="";
+      for(var i=0;i<d.highlights.length;i++){
+        var hl=d.highlights[i];
+        h+='<div class="highlight-tag" title="'+hl.description+'">';
+        h+='<span>'+hl.emoji+'</span>';
+        h+='<span>'+hl.title+'</span>';
+        h+='<span class="hl-score">★'+hl.score+'</span>';
+        h+='</div>';
+      }
+      list.innerHTML=h;
+    }
+  }catch(e){}
+}
+
 
 // Init
 refreshPlayers();
 </script>
+<div class="recap-scoreboard"><h3>Scoreboard</h3><div id="recapScoreList"></div></div>
+<button class="btn btn-secondary recap-close" onclick="document.getElementById('recapOverlay').style.display='none'">Close</button>
+</div>
+</div>
+
 </body>
 </html>
